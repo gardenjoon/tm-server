@@ -1,6 +1,6 @@
 import { Column, Entity, Index } from "typeorm";
 
-// @Index("pk_tb_rest_menu_info", ["restId", "restNm", "sqno"], { unique: true })
+@Index("pk_tb_rest_menu_info", ["restId", "restNm", "sqno"], { unique: true })
 @Entity("tb_rest_menu_info", { schema: "public" })
 export class TbRestMenuInfo {
   @Column("numeric", { primary: true, name: "rest_id", precision: 5, scale: 0 })

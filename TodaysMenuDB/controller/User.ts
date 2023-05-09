@@ -1,5 +1,5 @@
 import { DataSource, Repository } from "typeorm";
-import { TbUser } from "../entity/TbUser";
+import { TbUser } from "../entities/TbUser";
 import { AppDataSource, Entity } from "../index";
 
 export class UserRepository extends Repository<TbUser> {
@@ -19,6 +19,7 @@ export class UserRepository extends Repository<TbUser> {
             userNm: name,
         });
     }
+
     findProfile(userName: string) {
         return this.createQueryBuilder("user")
             .select(
@@ -45,11 +46,11 @@ export class UserRepository extends Repository<TbUser> {
         );
     }
 
-    async idCheck(userId: string) {
+    async checkId(lgnId: string) {
         return await AppDataSource.manager.query(
             `SELECT COUNT(*)
               FROM TB_USER
-            WHERE LGN_ID = UPPER('${userId}')`
+            WHERE LGN_ID = UPPER('${lgnId}')`
         );
     }
 
@@ -74,28 +75,117 @@ export class UserRepository extends Repository<TbUser> {
         }
     }
 
-    async signUp(loginData: {
-        userNm: string;
-        loginId: string;
-        password: string;
-        emailAddr: string;
-        gender: number;
-        age: number;
-        tall: number;
-        weight: number;
-        hardActiveDays: number;
-        hardActiveHours: number;
-        hardActiveMins: number;
-        softActiveDays: number;
-        softActiveHours: number;
-        softActiveMins: number;
-        walkingDays: number;
-        walkingHours: number;
-        walkingMins: number;
-        hateFood: string[];
-        likeFood: string[];
-        allergy: string;
-    }) {
+    async updateUser(
+        userId: string,
+        loginData: {
+            name: string;
+            id: string;
+            password: string;
+            email: string;
+            gender: number;
+            birth: number;
+            tall: number;
+            weight: number;
+            hate: string[];
+            like: string[];
+            allergy: string[];
+        },
+        activityData: {
+            hardTimes: { days: number; hours: number; minutes: number };
+            softTimes: { days: number; hours: number; minutes: number };
+            walkTimes: { days: number; hours: number; minutes: number };
+        }
+    ) {
+        const queryRunner = AppDataSource.createQueryRunner();
+
+        await queryRunner.connect();
+
+        await queryRunner.startTransaction();
+
+        try {
+            await queryRunner.manager.query(
+                `UPDATE TB_USER
+                    SET
+                        AGE = ${loginData.birth}::numeric
+                        , STTR = ${loginData.tall}::numeric
+                        , bdwg = ${loginData.weight}::numeric
+                        , GNDR_CD = '${loginData.gender}'
+                        , HATE_FOOD = '${loginData.hate}'
+                        , LIKE_FOOD = '${loginData.like}'
+                        , WKLY_BEST_ACTV_DYCNT = ${activityData.hardTimes.days}::numeric
+                        , DY_BEST_ACTV_HR = '${activityData.hardTimes.days}'
+                        , DY_BEST_ACTV_MIN = '${activityData.hardTimes.days}'
+                        , WKLY_MDDL_ACTV_DYCNT = ${activityData.softTimes.days}::numeric
+                        , DY_MDDL_ACTV_HR = '${activityData.softTimes.hours}'
+                        , DY_MDDL_ACTV_MIN = '${activityData.softTimes.minutes}'
+                        , WORKING_DAY = '${activityData.walkTimes.days}'
+                        , WORKING_HOUR = '${activityData.walkTimes.hours}'
+                        , WORKING_MIN = '${activityData.walkTimes.minutes}'
+                        , RGSR_ID = '${userId}'
+                        , RGSN_DTTM = TO_CHAR(CURRENT_TIMESTAMP,'YYYYMMDDHH24MISS')
+                        , AMND_ID = '${userId}'
+                        , AMNT_DTTM = TO_CHAR(CURRENT_TIMESTAMP,'YYYYMMDDHH24MISS')
+                    WHERE USER_ID = '${userId}'
+            `
+            );
+            await queryRunner.commitTransaction();
+            return "Profile Successfully Updated";
+        } catch (e) {
+            console.log(e);
+            await queryRunner.rollbackTransaction();
+            throw e;
+        }
+    }
+
+    async signIn(login_id: String, password: String) {
+        const queryRunner = AppDataSource.createQueryRunner();
+
+        await queryRunner.connect();
+
+        await queryRunner.startTransaction();
+
+        try {
+            const user = (
+                await queryRunner.manager.query(`
+                SELECT user_id, pwd FROM tb_user
+                    where lgn_id=UPPER('${login_id}')
+            `)
+            )[0];
+            await queryRunner.commitTransaction();
+            if (!user) {
+                return "No User";
+            } else if (password != user["pwd"]) {
+                return "password error";
+            } else {
+                return user["user_id"];
+            }
+        } catch (e) {
+            await queryRunner.rollbackTransaction();
+            console.log(e);
+            throw e;
+        }
+    }
+
+    async signUp(
+        loginData: {
+            name: string;
+            id: string;
+            password: string;
+            email: string;
+            gender: number;
+            birth: number;
+            tall: number;
+            weight: number;
+            hate: string[];
+            like: string[];
+            allergy: string[];
+        },
+        activityData: {
+            hardTimes: { days: number; hours: number; minutes: number };
+            softTimes: { days: number; hours: number; minutes: number };
+            walkTimes: { days: number; hours: number; minutes: number };
+        }
+    ) {
         const userId = (
             await AppDataSource.manager
                 .query(`SELECT 'USER'||LPAD(cast(cast(COALESCE(cast(MAX(SUBSTR(USER_ID,5)) as varchar),'00') as integer)+1 as varchar),10,'0') as user_id
@@ -109,7 +199,8 @@ export class UserRepository extends Repository<TbUser> {
         await queryRunner.startTransaction();
 
         try {
-            await queryRunner.manager.query(`INSERT INTO TB_USER
+            await queryRunner.manager.query(`
+            INSERT INTO TB_USER
             (
                 USER_ID,
                 USER_NM,
@@ -139,25 +230,25 @@ export class UserRepository extends Repository<TbUser> {
                 AMNT_DTTM
             ) VALUES (
                 '${userId}',
-                '${loginData.userNm}',
-                UPPER('${loginData.loginId}'),
+                '${loginData.name}',
+                UPPER('${loginData.id}'),
                 '${loginData.password}',
-                '${loginData.emailAddr}',
-                '${loginData.gender.toString()}',
-                '${loginData.age}',
-                '${loginData.tall}',
-                '${loginData.weight}',
-                '${loginData.hardActiveDays.toString()}',
-                '${loginData.hardActiveHours.toString()}',
-                '${loginData.hardActiveMins.toString()}',
-                '${loginData.softActiveDays.toString()}',
-                '${loginData.softActiveHours.toString()}',
-                '${loginData.softActiveMins.toString()}',
-                '${loginData.walkingDays.toString()}',
-                '${loginData.walkingHours.toString()}',
-                '${loginData.walkingMins.toString()}',
-                '${loginData.hateFood.join(",")}',
-                '${loginData.likeFood.join(",")}',
+                '${loginData.email}',
+                '${loginData.gender}',
+                ${loginData.birth},
+                ${loginData.tall},
+                ${loginData.weight},
+                ${activityData.hardTimes.days},
+                '${activityData.hardTimes.hours.toString()}',
+                '${activityData.hardTimes.minutes.toString()}',
+                ${activityData.softTimes.days},
+                '${activityData.softTimes.hours.toString()}',
+                '${activityData.softTimes.minutes.toString()}',
+                '${activityData.walkTimes.days.toString()}',
+                '${activityData.walkTimes.hours.toString()}',
+                '${activityData.walkTimes.minutes.toString()}',
+                '${loginData.hate.join(",")}',
+                '${loginData.like.join(",")}',
                 'Y',
                 '20',
                 '${userId}',
@@ -167,12 +258,12 @@ export class UserRepository extends Repository<TbUser> {
             );
             `);
 
-            for (let allergy of loginData.allergy) {
+            for (let allergy_item of loginData.allergy) {
                 const result = (
                     await AppDataSource.manager.query(`
                         select * from tb_food_cd
                         where cd_nm
-                        like '${allergy}'
+                        like '${allergy_item}'
                     `)
                 )[0];
                 await AppDataSource.manager.query(`
@@ -191,7 +282,7 @@ export class UserRepository extends Repository<TbUser> {
                         '${userId}',
                         '${result.cd_set_cd}',
                         '${result.cd}',
-                        UPPER('${loginData.loginId}'),
+                        UPPER('${loginData.id}'),
                         '${userId}',
                         TO_CHAR(CURRENT_TIMESTAMP, 'YYYYMMDDHH24MISS'),
                         '${userId}',
@@ -200,10 +291,11 @@ export class UserRepository extends Repository<TbUser> {
             }
 
             await queryRunner.commitTransaction();
-            return "Successfully Saved Login Data";
+            return userId;
         } catch (e) {
             await queryRunner.rollbackTransaction();
-            throw e;
+            console.log(e);
+            return e.detail;
         }
     }
 }

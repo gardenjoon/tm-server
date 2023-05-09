@@ -1,6 +1,6 @@
 import { Repository } from "typeorm";
 import { AppDataSource, Entity } from "..";
-import { TbFoodInfo } from "../entity/TbFoodInfo";
+import { TbFoodInfo } from "../entities/TbFoodInfo";
 
 // 권장칼로리 and 섭취칼로리 쿼리
 export class FoodInfoRepository extends Repository<TbFoodInfo> {

@@ -1,6 +1,6 @@
 import { Column, Entity, Index } from "typeorm";
 
-// @Index("pk_tb_food_cd_set", ["cdSetCd"], { unique: true })
+@Index("pk_tb_food_cd_set", ["cdSetCd"], { unique: true })
 @Entity("tb_food_cd_set", { schema: "public" })
 export class TbFoodCdSet {
   @Column("character varying", { primary: true, name: "cd_set_cd", length: 6 })

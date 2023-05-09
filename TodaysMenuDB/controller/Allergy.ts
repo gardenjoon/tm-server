@@ -1,6 +1,6 @@
 import { Repository } from "typeorm";
 import { AppDataSource } from "..";
-import { TbUserFoodCdInfo } from "../entity/TbUserFoodCdInfo";
+import { TbUserFoodCdInfo } from "../entities/TbUserFoodCdInfo";
 import { Entity } from "../index";
 
 export class AllergyRepository extends Repository<TbUserFoodCdInfo>{

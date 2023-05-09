@@ -6,7 +6,6 @@ const calInfo = async (req: Request, res: Response) => {
     const userName = req.params.userId;
     const user = (await new Controller.User(Entity.User, AppDataSource.manager).findById(userName))[0];
     const result = await new Controller.FoodInfo(Entity.FoodInfo, AppDataSource.manager).bodyInfo(user.lgnId);
-    console.log(result);
 
     return res.status(200).json({
         status: 200,
@@ -61,6 +60,5 @@ const getDinner = async (req: Request, res: Response) => {
         data: result,
     });
 };
-
 
 export { calInfo, getBreakfast, getLunch, getDinner };

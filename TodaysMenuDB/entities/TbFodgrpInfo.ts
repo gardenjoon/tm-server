@@ -1,6 +1,6 @@
 import { Column, Entity, Index } from "typeorm";
 
-// @Index("pk_tb_fodgrp_info", ["cal"], { unique: true })
+@Index("pk_tb_fodgrp_info", ["cal"], { unique: true })
 @Entity("tb_fodgrp_info", { schema: "public" })
 export class TbFodgrpInfo {
   @Column("numeric", { primary: true, name: "cal", precision: 10, scale: 0 })

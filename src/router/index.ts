@@ -7,8 +7,8 @@ import restaurantRouter from "./restaurantRouter";
 
 const router: Router = express.Router();
 
-router.use('/user', userRouter);
-router.use('/menu', menuRouter);
-router.use('/restaurant', restaurantRouter);
+router.use("/user", userRouter);
+router.use("/menu", menuRouter);
+router.use("/restaurant", restaurantRouter);
 
 export default router;

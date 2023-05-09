@@ -1,6 +1,6 @@
 import { Repository } from "typeorm";
 import { AppDataSource } from "..";
-import { TbRestInfo } from "../entity/TbRestInfo";
+import { TbRestInfo } from "../entities/TbRestInfo";
 
 export class RestaurantRepository extends Repository<TbRestInfo> {
     async getRestaurantList(rest_id?: string, rest_nm?: string, place_nm?: string, stt_no?: string, end_no?: string) {

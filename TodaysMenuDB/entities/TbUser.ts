@@ -1,7 +1,6 @@
-import { Column, Entity, Index, OneToMany } from "typeorm";
-import { TbUserFoodCdInfo } from "./TbUserFoodCdInfo";
+import { Column, Entity, Index } from "typeorm";
 
-// @Index("pk_tb_user", ["lgnId"], { unique: true })
+@Index("pk_tb_user", ["lgnId"], { unique: true })
 @Entity("tb_user", { schema: "public" })
 export class TbUser {
   @Column("character varying", { name: "user_id", length: 24 })
@@ -108,7 +107,4 @@ export class TbUser {
 
   @Column("character", { name: "amnt_dttm", length: 14 })
   amntDttm: string;
-
-  @OneToMany(() => TbUserFoodCdInfo, userFoodInfo => userFoodInfo.userId)
-  allergies: TbUserFoodCdInfo[]
 }

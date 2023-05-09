@@ -1,6 +1,6 @@
 import { Column, Entity, Index } from "typeorm";
 
-// @Index("pk_tb_food_info", ["foodGropCd", "foodGropSqno"], { unique: true })
+@Index("pk_tb_food_info", ["foodGropCd", "foodGropSqno"], { unique: true })
 @Entity("tb_food_info", { schema: "public" })
 export class TbFoodInfo {
   @Column("character varying", {
