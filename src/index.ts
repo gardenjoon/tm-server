@@ -1,8 +1,6 @@
 import "reflect-metadata";
-import * as express from "express";
+import express from "express";
 import apiRoute from "./router/index";
-
-import { AppDataSource, Controller, Entity } from "../TodaysMenuDB";
 
 const app = express();
 
