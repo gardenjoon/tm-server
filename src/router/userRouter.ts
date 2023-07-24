@@ -1,17 +1,18 @@
 import * as express from "express";
 import { Router } from "express";
-import { findByName, findById, getProfile, updateProfile, signup, signin, checkLgnId, deleteUser } from "../api/user";
+import { findById, getProfile, updateProfile, signup, signin, checkLgnId, deleteUser, getAllergy } from "../api/user";
 
 const router: Router = express.Router();
 
-router.get("/findByName/:userName", findByName);
 router.get("/userId/:userId", findById);
 router.get("/getProfile/:userId", getProfile);
 router.get("/checkLgnId/:loginId", checkLgnId);
 router.get("/deleteUser/:userId", deleteUser);
 
+router.get("/getAllergy", getAllergy);
+
 router.post("/updateProfile/", updateProfile);
-router.post("/signup", signup);
-router.post("/signin", signin);
+router.post("/signUp", signup);
+router.post("/signIn", signin);
 
 export default router;

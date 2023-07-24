@@ -2,34 +2,30 @@ import * as dotenv from "dotenv";
 dotenv.config();
 import { DataSource } from "typeorm";
 
-import { TbUser } from "./entities/TbUser";
-import { TbUserFoodCdInfo } from "./entities/TbUserFoodCdInfo";
+import { UserInfo } from "./entity/UserInfo";
+import { FoodInfo } from "./entity/FoodInfo";
+import { AllergyInfo } from "./entity/AllergyInfo";
+import { AllergySet } from "./entity/AllergySet";
+import { ResMenu } from "./entity/ResMenu";
 
 import { UserRepository } from "./controller/User";
-import { AllergyRepository } from "./controller/Allergy";
-import { TbFoodCdSet } from "./entities/TbFoodCdSet";
-import { TbFoodCd } from "./entities/TbFoodCd";
-import { TbFoodInfo } from "./entities/TbFoodInfo";
 import { FoodInfoRepository } from "./controller/FoodInfo";
-import { TbRestInfo } from "./entities/TbRestInfo";
-import { TbRestMenuInfo } from "./entities/TbRestMenuInfo";
-import { RestaurantRepository } from "./controller/Restaurant";
+import { AllergyRepository } from "./controller/AllergyInfo";
+import { ResMenuRepository } from "./controller/ResMenu";
 
 export const Entity = {
-    User: TbUser,
-    Allergy: TbUserFoodCdInfo,
-    FoodSet: TbFoodCdSet,
-    Food: TbFoodCd,
-    FoodInfo: TbFoodInfo,
-    Restaurant: TbRestInfo,
-    Menu: TbRestMenuInfo,
+    User: UserInfo,
+    FoodInfo: FoodInfo,
+    AllergyInfo: AllergyInfo,
+    AllergySet: AllergySet,
+    ResMenu: ResMenu,
 };
 
 export const Controller = {
     User: UserRepository,
-    Allergy: AllergyRepository,
     FoodInfo: FoodInfoRepository,
-    Restaurant: RestaurantRepository,
+    Allergy: AllergyRepository,
+    ResMenu: ResMenuRepository,
 };
 
 export const AppDataSource = new DataSource({
@@ -39,7 +35,7 @@ export const AppDataSource = new DataSource({
     username: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_DATABASE,
-    entities: ["TodaysMenuDB/entity/**/*.ts"],
+    entities: [__dirname + "/entity/**/*.{js,ts}"],
     logging: false,
     synchronize: false,
 });

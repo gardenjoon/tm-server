@@ -15,25 +15,26 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 const uploadImg = async (req: Request, res: Response, next) => {
-    const [predictions, sum] = await predictModel(req.file.path);
-    // const predictions = await predictModel("uploads/a.jpg");
+    try {
+        const [predictions, sum] = await predictModel(req.file!.path);
 
-    fs.unlinkSync(`./uploads/${req.file.filename}`);
-    console.log(req.file.filename + " uploaded and deleted successfully!");
+        fs.unlinkSync(`./uploads/${req.file!.filename}`);
 
-    const output = fs.readFileSync("./uploads/output.jpg");
+        const output = fs.readFileSync("./uploads/output.jpg");
 
-    fs.unlinkSync(`./uploads/output.jpg`);
-    console.log("Output.jpg deleted successfully!");
+        fs.unlinkSync(`./uploads/output.jpg`);
 
-    return res.status(200).json({
-        status: 200,
-        data: {
-            prediction: predictions,
-            image: Buffer.from(output).toString("base64"),
-            sum: sum,
-        },
-    });
+        return res.status(200).json({
+            status: 200,
+            data: {
+                prediction: predictions,
+                image: Buffer.from(output).toString("base64"),
+                sum: Number(Number(sum).toFixed(0)),
+            },
+        });
+    } catch (e) {
+        return res.status(500);
+    }
 };
 
 export { uploadImg, upload };

@@ -7,202 +7,130 @@ import http from "http";
 import { createCanvas, loadImage } from "canvas";
 import { json } from "express";
 
-const classes = ["불고기", "동전", "김치찌개", "김치", "밥", "미역국"];
-// [
-//     "오꼬노미야끼",
-//     "쇠고기카레",
-//     "고기국수",
-//     "비빔밥",
-//     "치킨에그덮밥",
-//     "치킨덮밥",
-//     "감자칩샌드위치",
-//     "크루아상",
-//     "우니덮밥",
-//     "볶음국수",
-//     "볶음밥",
-//     "그라탕",
-//     "햄버거",
-//     "필라프",
-//     "피자",
-//     "돈까스덮밥",
-//     "건포도빵",
-//     "라면",
-//     "밥",
-//     "롤빵",
-//     "샌드위치",
-//     "소바",
-//     "스파게티",
-//     "스시",
-//     "타코야끼",
-//     "텐동",
-//     "텐우동",
-//     "탄탄면",
-//     "토스트",
-//     "우동",
-//     "베이그넷",
-//     "빵푸딩",
-//     "브루스케타",
-//     "시저샐러드",
-//     "카놀리",
-//     "당근케잌",
-//     "세비체",
-//     "치즈케이크",
-//     "치킨퀘사디아",
-//     "닭윙",
-//     "초콜릿케이크",
-//     "초콜릿무스",
-//     "츄러스",
-//     "클램차우더",
-//     "클럽샌드위치",
-//     "크랩케이크",
-//     "크림브륄레",
-//     "컵케이크",
-//     "달걀미모사",
-//     "만두",
-//     "가지",
-//     "에그베네딕트",
-//     "에스카르고",
-//     "중동경단",
-//     "생선",
-//     "감자튀김",
-//     "프랑스식양파수프",
-//     "프렌치토스트",
-//     "오징어튀김",
-//     "튀밥",
-//     "얼린요구르트",
-//     "그릭샐러드",
-//     "그릴드치즈샌드위치",
-//     "구운연어",
-//     "과카몰리",
-//     "교자",
-//     "햄버거",
-//     "산라탕",
-//     "핫도그",
-//     "훔무스",
-//     "아이스크림",
-//     "코샤리",
-//     "라자냐",
-//     "랍스터비스크",
-//     "랍스터롤샌드위치",
-//     "마카로니앤치즈",
-//     "마카롱",
-//     "미소된장국",
-//     "몰로키아",
-//     "나쵸",
-//     "오믈렛",
-//     "어니언링",
-//     "굴",
-//     "팬케이크",
-//     "판나코타",
-//     "피자",
-//     "폭찹",
-//     "푸틴",
-//     "풀드포크샌드위치",
-//     "라비올리",
-//     "레드벨벳케이크",
-//     "리조또",
-//     "사모사",
-//     "회",
-//     "가리비",
-//     "쉬림프앤그릿츠",
-//     "볼로네제",
-//     "까르보나라",
-//     "스프링롤",
-//     "스테이크",
-//     "딸기숏케이크",
-//     "회",
-//     "고구마",
-//     "타코",
-//     "티라미수",
-//     "참치타르타르",
-//     "와플",
-//     "애플파이",
-//     "등갈비",
-//     "바클라바",
-//     "육회",
-//     "비트샐러드",
-//     "베이그넷",
-//     "빵푸딩",
-//     "브리또",
-//     "브루스케타",
-//     "당근케이크",
-//     "세비체",
-//     "치즈",
-//     "치킨퀘사디아",
-//     "닭봉",
-//     "초콜릿무스",
-//     "클램차우더",
-//     "클럽샌드위치",
-//     "크랩케이크",
-//     "크림브륄레",
-//     "크로크마담",
-//     "컵케이크",
-//     "도넛",
-//     "만두",
-//     "가지",
-//     "에그베네딕트",
-//     "에스카르고",
-//     "팔라펠",
-//     "필레미뇽",
-//     "생선",
-//     "푸아그라",
-//     "감자튀김",
-//     "프렌치토스트",
-//     "볶음밥",
-//     "얼린요구르트",
-//     "마늘빵",
-//     "뇨끼",
-//     "그릴드치즈샌드위치",
-//     "구운연어",
-//     "과카몰리",
-//     "산라탕",
-//     "핫도구",
-//     "훔무스",
-//     "아이스크림",
-//     "랍스터비스크",
-//     "마카로니앤치즈",
-//     "미소된자국",
-//     "몰로키아",
-//     "나쵸",
-//     "오믈렛",
-//     "어니언링",
-//     "팬케이크",
-//     "북경오리",
-//     "폭찹",
-//     "푸틴",
-//     "로스트비프",
-//     "라비올리",
-//     "리조또",
-//     "사모사",
-//     "회",
-//     "가리비",
-//     "와카메",
-//     "쉬림프앤그릿츠",
-//     "볼로네제",
-//     "까르보나라",
-//     "스프링롤",
-//     "스테이크",
-//     "고구마",
-//     "타코",
-//     "티라미수",
-//     "참치타르타르",
-//     "와플",
-//     "-",
-//     "카르파초",
-//     "시저샐러드",
-//     "카프레제샐러드",
-//     "달걀미모사",
-//     "그릭샐러드",
-//     "교자",
-//     "렌틸스프",
-//     "홍합",
-//     "포도잎",
-//     "불고기",
-//     "동전",
-//     "김치찌개",
-//     "김치",
-//     "미역국",
-// ];
+const classes = [
+    "쌀밥",
+    "잡곡밥",
+    "현미밥",
+    "카레라이스",
+    "김밥",
+    "김치볶음밥",
+    "김치",
+    "연근조림",
+    "동치미",
+    "잡채",
+    "김치찌개",
+    "갈비",
+    "육회",
+    "콩나물",
+    "우동",
+    "백김치",
+    "잔치국수",
+    "콩나물국밥",
+    "곰탕",
+    "도라지나물",
+    "비빔밥",
+    "어묵탕",
+    "부대찌개",
+    "불고기",
+    "총각김치",
+    "오이김치",
+    "치킨마요덮밥",
+    "북엇국",
+    "장어",
+    "볶음밥",
+    "파김치",
+    "고등어구이",
+    "장조림",
+    "제육볶음",
+    "메밀소바",
+    "된장국",
+    "잡곡밥",
+    "나박김치",
+    "냉면",
+    "가자미구이",
+    "족발",
+    "삼겹살",
+    "깍두기",
+    "깍두기",
+    "삼각김밥",
+    "김밥",
+    "도라지무침",
+    "고사리",
+    "호박무침",
+    "미역국",
+    "김",
+    "조개국",
+    "육개장",
+    "시금치나물",
+    "고등어조림",
+    "멸치조림",
+    "열무김치",
+    "짬뽕",
+    "라면",
+    "양념치킨",
+    "된장찌개",
+    "감자탕",
+    "제육볶음",
+    "짜장면",
+    "칼국수",
+    "만두",
+    "파전",
+    "삼계탕",
+    "순대국밥",
+    "떡볶이",
+    "떡국",
+    "yolov5",
+    "호박전",
+    "미역줄기볶음",
+    "소시지볶음",
+    "100원",
+    "숙주나물",
+    "카드",
+    "계란후라이",
+    "감자전",
+    "계란찜",
+    "순두부찌개",
+    "채소튀김",
+    "골뱅이무침",
+    "쥐포튀김",
+    "깨강정",
+    "깍두기",
+    "꿀떡",
+    "미꾸라지튀김",
+    "백설기",
+    "윙봉",
+    "닭꼬치",
+    "닭튀김",
+    "달걀말이",
+    "단무지",
+    "단무지무침",
+    "더덕구이",
+    "돈까스",
+    "동그랑땡",
+    "어묵볶음",
+    "감자튀김",
+    "간장게장",
+    "가래떡",
+    "김말이튀김",
+    "김무침",
+    "훈제오리",
+    "인절미",
+    "마늘쫑장아찌",
+    "메추리알",
+    "메밀전병",
+    "모래집튀김",
+    "무말랭이",
+    "무생채",
+    "멸치볶음",
+    "팥죽",
+    "생연어",
+    "시루떡",
+    "송편",
+    "야채죽",
+    "한과",
+    "약과",
+    "잡채",
+];
 
 const predictModel = async (imgPath: string) => {
     const model = await tf.loadGraphModel(`file:///home/idblab/tm-server/src/tf/model/model.json`);
@@ -227,8 +155,15 @@ const predictModel = async (imgPath: string) => {
 
     let predictions = [];
 
+    let isCoin = false;
     for (let i = 0; i < valid_detections_data; ++i) {
-        if (classes[classes_data[i]] == "동전") continue;
+        if (classes[classes_data[i]] == "100원") {
+            isCoin = true;
+            let [x1, y1, x2, y2] = boxes_data.slice(i * 4, (i + 1) * 4);
+            var img_coin_width = x2 - x1;
+            continue;
+        }
+
         let [x1, y1, x2, y2] = boxes_data.slice(i * 4, (i + 1) * 4);
         const width = x2 - x1;
         const height = y2 - y1;
@@ -244,31 +179,50 @@ const predictModel = async (imgPath: string) => {
             score,
         ]);
     }
+    if (isCoin) {
+        predictions = predictWeight(predictions, img_coin_width);
+    }
+    console.log(predictions);
 
     let finalResult = [];
     let contained = new Set();
     let sum = 0;
     for (const item of predictions) {
-        if (item[4] == "동전") continue;
+        if (item[4] == "100원") continue;
 
-        const searchResult = await getFoodInform(item[4]);
-
+        let searchResult = await getFoodInform(item[4]);
         if ([...contained].includes(item[4])) {
             sum += Number(searchResult["NUTR_CONT1"]);
             continue;
         }
 
         if (searchResult != null) {
-            finalResult.push({
-                name: item[4],
-                percent: item[5],
-                total: searchResult["SERVING_WT"],
-                calorie: searchResult["NUTR_CONT1"],
-                carbohydrate: searchResult["NUTR_CONT2"],
-                protein: searchResult["NUTR_CONT3"],
-                fat: searchResult["NUTR_CONT4"],
-            });
-            sum += Number(searchResult["NUTR_CONT1"]);
+            if (item[6]) {
+                const weight_ratio = item[6] / searchResult["SERVING_WT"];
+                finalResult.push({
+                    name: item[4],
+                    percent: item[5],
+                    total: Number(item[6].toFixed(2)),
+                    calorie: Number((searchResult["NUTR_CONT1"] * weight_ratio).toFixed(2)),
+                    carbohydrate: Number((searchResult["NUTR_CONT2"] * weight_ratio).toFixed(2)),
+                    protein: Number((searchResult["NUTR_CONT3"] * weight_ratio).toFixed(2)),
+                    fat: Number((searchResult["NUTR_CONT4"] * weight_ratio).toFixed(2)),
+                });
+                sum += Number((searchResult["NUTR_CONT1"] * weight_ratio).toFixed(2));
+            } else {
+                finalResult.push({
+                    name: item[4],
+                    percent: item[5],
+                    total: item[6] ? item[6] : searchResult["SERVING_WT"],
+                    calorie: item[6]
+                        ? (searchResult["NUTR_CONT1"] * item[6]) / searchResult["SERVING_WT"]
+                        : searchResult["NUTR_CONT1"],
+                    carbohydrate: searchResult["NUTR_CONT2"],
+                    protein: searchResult["NUTR_CONT3"],
+                    fat: searchResult["NUTR_CONT4"],
+                });
+                sum += Number(searchResult["NUTR_CONT1"]);
+            }
             contained.add(item[4]);
         }
     }
@@ -317,7 +271,6 @@ const drawImage = async (imgPath, predictions, fontsize) => {
     const canvas = createCanvas(image.width, image.height);
     const ctx = canvas.getContext("2d");
     ctx.drawImage(image, 0, 0);
-    // ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
     //폰트
     const font = `${fontsize}px sans-serif`;
@@ -327,23 +280,21 @@ const drawImage = async (imgPath, predictions, fontsize) => {
     predictions.forEach((xys) => {
         // box 그리기
         ctx.strokeStyle = "#ff0000";
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 16;
         ctx.strokeRect(xys[0], xys[1], xys[2], xys[3]);
 
         //label background 그리기
         ctx.fillStyle = "#ff0000";
 
-        // const text = i + " " + xys[4] + ":" + xys[5]
         const text = xys[4];
         const textWidth = ctx.measureText(text).width;
         const textHeight = parseInt(font, 10);
-        ctx.fillRect(xys[0], xys[1] - (textHeight + 4), textWidth + 4, textHeight + 4);
+        ctx.fillRect(xys[0], xys[1] - (textHeight + 20), textWidth + 8, textHeight + 20);
     });
 
     predictions.forEach((xys) => {
         //label 그리기
         ctx.fillStyle = "#ffffff";
-        // const text = i + " " + xys[4] + ":" + xys[5]
         const text = xys[4];
         ctx.fillText(text, xys[0] + 2, xys[1] + 3);
     });
@@ -354,8 +305,27 @@ const drawImage = async (imgPath, predictions, fontsize) => {
     await new Promise((resolve, reject) => {
         stream.pipe(output).on("finish", resolve).on("error", reject);
     });
+};
 
-    console.log("Rectangle drawn successfully!");
+const predictWeight = (predictions, img_coin_width) => {
+    const specific_food = [
+        0, 1, 2, 3, 5, 10, 14, 16, 17, 18, 20, 21, 22, 27, 29, 34, 35, 38, 45, 49, 51, 52, 57, 58, 60, 61, 63, 64, 67, 68,
+        70, 81, 86,
+    ];
+    const coin_width = 24;
+
+    for (const [index, item] of predictions.entries()) {
+        if (specific_food.includes(classes.indexOf(item[4]))) {
+            const food_width = item[2];
+            console.log(food_width);
+            console.log(img_coin_width);
+            const exact_food_width = (food_width / img_coin_width) * coin_width;
+            console.log(exact_food_width);
+            const food_weight = 2 * exact_food_width;
+            predictions[index].push(food_weight);
+        }
+    }
+    return predictions;
 };
 
 export default predictModel;

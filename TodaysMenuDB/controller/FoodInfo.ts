@@ -1,65 +1,175 @@
-import { Repository } from "typeorm";
+import { Repository, SimpleConsoleLogger } from "typeorm";
 import { AppDataSource, Entity } from "..";
-import { TbFoodInfo } from "../entities/TbFoodInfo";
+import { FoodInfo } from "../entity/FoodInfo";
 
 // 권장칼로리 and 섭취칼로리 쿼리
-export class FoodInfoRepository extends Repository<TbFoodInfo> {
+export class FoodInfoRepository extends Repository<FoodInfo> {
     async bodyInfo(lgn_id: string) {
         return await AppDataSource.manager.query(
-            `SELECT A.*
-            , ((CASE WHEN A.BMI >= 25.0 AND A.BODY_ACTY = '10' THEN 35 -- 과체중 고신체활동
-                            WHEN A.BMI >= 25.0 AND A.BODY_ACTY = '20' THEN 30 -- 과체중 중신체활동
-                            WHEN A.BMI >= 25.0 AND A.BODY_ACTY = '30' THEN 25 -- 과체중 저신체활동
-                            WHEN (A.BMI BETWEEN 18.5 AND 25.0) AND A.BODY_ACTY = '10' THEN 40 -- 정상 고신체활동
-                            WHEN (A.BMI BETWEEN 18.5 AND 25.0) AND A.BODY_ACTY = '20' THEN 35 -- 정상 중신체활동
-                            WHEN (A.BMI BETWEEN 18.5 AND 25.0) AND A.BODY_ACTY = '30' THEN 30 -- 정상 저신체활동
-                            WHEN A.BMI < 18.5 AND A.BODY_ACTY = '10' THEN 45 -- 저체중 고신체활동
-                            WHEN A.BMI < 18.5 AND A.BODY_ACTY = '20' THEN 40 -- 저체중 중신체활동
-                            WHEN A.BMI < 18.5 AND A.BODY_ACTY = '30' THEN 35 -- 저체중 저신체활동
-                            END) * A.BDWG) AVG_CAL -- 하루섭취권장열량
-            , ROUND(((CASE WHEN A.BMI >= 25.0 AND A.BODY_ACTY = '10' THEN 35 -- 과체중 고신체활동
-                                            WHEN A.BMI >= 25.0 AND A.BODY_ACTY = '20' THEN 30 -- 과체중 중신체활동
-                                            WHEN A.BMI >= 25.0 AND A.BODY_ACTY = '30' THEN 25 -- 과체중 저신체활동
-                                            WHEN (A.BMI BETWEEN 18.5 AND 25.0) AND A.BODY_ACTY = '10' THEN 40 -- 정상 고신체활동
-                                            WHEN (A.BMI BETWEEN 18.5 AND 25.0) AND A.BODY_ACTY = '20' THEN 35 -- 정상 중신체활동
-                                            WHEN (A.BMI BETWEEN 18.5 AND 25.0) AND A.BODY_ACTY = '30' THEN 30 -- 정상 저신체활동
-                                            WHEN A.BMI < 18.5 AND A.BODY_ACTY = '10' THEN 45 -- 저체중 고신체활동
-                                            WHEN A.BMI < 18.5 AND A.BODY_ACTY = '20' THEN 40 -- 저체중 중신체활동
-                                            WHEN A.BMI < 18.5 AND A.BODY_ACTY = '30' THEN 35 -- 저체중 저신체활동
-                                            END) * A.BDWG) / 3,2) MEAL_CAL -- 한끼섭취권장열량
-            FROM (
-                   SELECT A.BDWG
-                                , A.BMI
-                                , A.AVG_KG
-                                , (CASE WHEN A.WKLY_BEST_ACTV_DYCNT >= 3 OR A.BEST_MET >= 1500 OR A.TOTL_MET >= 3000 THEN '10'
-                                               WHEN (A.DY_BEST_ACTV_HR >= 20 AND A.WKLY_BEST_ACTV_DYCNT >=3) OR A.DY_MDDL_ACTV_MIN >= 30 OR A.WORKING_DAY >= 5 OR A.TOTL_MET >= 600 THEN '20'
-                                                   ELSE '30' END) BODY_ACTY -- 10: 고신체활동, 20: 중신체활동, 30: 저신체활동
-                    FROM (
-                                       SELECT A.*
-                                                    , (3.3 * WORKING_HOUR * WORKING_DAY) WORKING_MET -- 걷기활동 MET
-                                                    , (4.0 * DY_MDDL_ACTV_HR * WKLY_MDDL_ACTV_DYCNT) MDDL_MET -- 중간정도활동 MET
-                                                    , (8.0 * DY_BEST_ACTV_HR * WKLY_BEST_ACTV_DYCNT) BEST_MET -- 격렬한 활동 MET
-                                                    , (3.3 * WORKING_HOUR * WORKING_DAY) + (4.0 * DY_MDDL_ACTV_HR * WKLY_MDDL_ACTV_DYCNT) + (8.0 * DY_BEST_ACTV_HR * WKLY_BEST_ACTV_DYCNT) TOTL_MET
-                                         FROM (
-                                                           SELECT BDWG
-                                                                        , ROUND(BDWG / (ROUND(STTR * 0.01,2) * ROUND(STTR * 0.01,2)),1) BMI
-                                                                        , ROUND((case when GNDR_CD = '10' then (ROUND(STTR * 0.01,2) * ROUND(STTR * 0.01,2)) * 22
-                                                                                                      when GNDR_CD = '20' then (ROUND(STTR * 0.01,2) * ROUND(STTR * 0.01,2)) * 21 end),2) AVG_KG -- 표준무게
-                                                                        , WORKING_DAY::numeric -- 걷기 일수
-                                                                        , WKLY_BEST_ACTV_DYCNT::numeric -- 고강도 일수
-                                                                        , WKLY_MDDL_ACTV_DYCNT::numeric -- 중강도 일수
-                                                                        , WORKING_HOUR::numeric -- 하루동안 걷기 시간
-                                                                        , DY_BEST_ACTV_HR::numeric -- 하루동안 고강도 시간
-                                                                        , DY_MDDL_ACTV_HR::numeric -- 하루동안 중강도 시간
-                                                                        , WORKING_MIN::numeric -- 하루동안 걷기 분
-                                                                        , DY_BEST_ACTV_MIN::numeric -- 하루동안 고강도 분
-                                                                        , DY_MDDL_ACTV_MIN::numeric -- 하루동안 중강도 분
-                                                             FROM TB_USER
-                                                          WHERE LGN_ID = '${lgn_id}'
-                                           ) A
-                       ) A
-            ) A`
+            `
+            SELECT
+                A.*,
+                ((CASE WHEN A.BMI >= 25.0 AND A.BODY_ACTY = '10' THEN 35
+                       WHEN A.BMI >= 25.0 AND A.BODY_ACTY = '20' THEN 30
+                       WHEN A.BMI >= 25.0 AND A.BODY_ACTY = '30' THEN 25
+                       WHEN (A.BMI BETWEEN 18.5 AND 25.0) AND A.BODY_ACTY = '10' THEN 40
+                       WHEN (A.BMI BETWEEN 18.5 AND 25.0) AND A.BODY_ACTY = '20' THEN 35
+                       WHEN (A.BMI BETWEEN 18.5 AND 25.0) AND A.BODY_ACTY = '30' THEN 30
+                       WHEN A.BMI < 18.5 AND A.BODY_ACTY = '10' THEN 45
+                       WHEN A.BMI < 18.5 AND A.BODY_ACTY = '20' THEN 40
+                       WHEN A.BMI < 18.5 AND A.BODY_ACTY = '30' THEN 35
+                  END) * A.WEIGHT) AVG_CAL,
+                ROUND(((CASE WHEN A.BMI >= 25.0 AND A.BODY_ACTY = '10' THEN 35
+                             WHEN A.BMI >= 25.0 AND A.BODY_ACTY = '20' THEN 30
+                             WHEN A.BMI >= 25.0 AND A.BODY_ACTY = '30' THEN 25
+                             WHEN (A.BMI BETWEEN 18.5 AND 25.0) AND A.BODY_ACTY = '10' THEN 40
+                             WHEN (A.BMI BETWEEN 18.5 AND 25.0) AND A.BODY_ACTY = '20' THEN 35
+                             WHEN (A.BMI BETWEEN 18.5 AND 25.0) AND A.BODY_ACTY = '30' THEN 30
+                             WHEN A.BMI < 18.5 AND A.BODY_ACTY = '10' THEN 45
+                             WHEN A.BMI < 18.5 AND A.BODY_ACTY = '20' THEN 40
+                             WHEN A.BMI < 18.5 AND A.BODY_ACTY = '30' THEN 35
+                        END) * A.WEIGHT) / 3, 2) MEAL_CAL
+            FROM
+                (
+                SELECT
+                    U.weight,
+                    U.account,
+                    U.gender,
+                    ROUND(U.weight / (ROUND(U.height * 0.01, 2) * ROUND(U.height * 0.01, 2)), 1) BMI,
+                    ROUND((CASE WHEN U.gender = 10 THEN (ROUND(U.height * 0.01, 2) * ROUND(U.height * 0.01, 2)) * 22
+                                WHEN U.gender = 20 THEN (ROUND(U.height * 0.01, 2) * ROUND(U.height * 0.01, 2)) * 21
+                           END), 2) AVG_KG,
+                    UE.wk_walk::numeric,
+                    UE.wk_hg_act::numeric,
+                    UE.wk_md_act::numeric,
+                    UE.dy_walk_hr::numeric,
+                    UE.dy_hg_act_hr::numeric,
+                    UE.dy_md_act_hr::numeric,
+                    UE.dy_walk_mn::numeric,
+                    UE.dy_hg_act_mn::numeric,
+                    UE.dy_md_act_mn::numeric,
+                    (CASE WHEN UE.wk_hg_act >= 3 OR UE.dy_hg_act_hr >= 20 OR UE.dy_hg_act_mn >= 30 THEN '10'
+                          WHEN UE.wk_md_act >= 3 OR UE.dy_md_act_hr >= 20 OR UE.dy_md_act_mn >= 30 THEN '20'
+                          WHEN UE.wk_walk >= 5 OR UE.dy_walk_hr >= 20 OR UE.dy_walk_mn >= 30 THEN '30'
+                    END) BODY_ACTY
+                FROM
+                    user_info U
+                JOIN user_exercise UE ON U.user_id = UE.user_id
+                WHERE
+                    U.account = '${lgn_id}'
+                ) A
+            `
         );
+    }
+
+    async getMenu(userId: string, menuStyles: Array<string>, tags: Array<string>, calorie: string) {
+        const toColumns = {
+            한식: "sty_kr",
+            중식: "sty_cn",
+            일식: "sty_jp",
+            양식: "sty_ws",
+            매콤: "lv_spicy",
+            고단백: "hg_prot",
+            저칼로리: "lw_cal",
+            저지방: "lv_fat",
+            저염: "lv_na",
+            저당: "lv_su",
+            채소류: "vegetable",
+            육류: "meat",
+            해산물: "seafood",
+        };
+
+        for (const index in menuStyles) {
+            menuStyles[index] = toColumns[menuStyles[index]];
+        }
+        for (const index in tags) {
+            tags[index] = toColumns[tags[index]];
+        }
+
+        const stringStyles = menuStyles.length == 0 ? "null" : "'" + JSON.stringify(menuStyles) + "'";
+        const stringTags = tags.length == 0 ? "null" : "'" + JSON.stringify(tags) + "'";
+
+        const queryRunner = AppDataSource.createQueryRunner();
+
+        await queryRunner.connect();
+
+        await queryRunner.startTransaction();
+
+        console.log(`
+            SELECT (meal_info_1).*
+            FROM MAKE_DISH_RECOMMENDATION(
+            '${userId}',
+            ${stringStyles},
+            ${stringTags},
+            ${Number(calorie)}
+            )
+            UNION ALL
+            SELECT (meal_info_2).*
+            FROM MAKE_DISH_RECOMMENDATION(
+            '${userId}',
+            ${stringStyles},
+            ${stringTags},
+            ${Number(calorie)}
+            )
+            UNION ALL
+            SELECT (meal_info_3).*
+            FROM MAKE_DISH_RECOMMENDATION(
+            '${userId}',
+            ${stringStyles},
+            ${stringTags},
+            ${Number(calorie)}
+            )
+            UNION ALL
+            SELECT (meal_info_4).*
+            FROM MAKE_DISH_RECOMMENDATION(
+            '${userId}',
+            ${stringStyles},
+            ${stringTags},
+            ${Number(calorie)}
+            )
+        `);
+
+        try {
+            const result = await queryRunner.manager.query(`
+                SELECT (meal_info_1).*
+                FROM MAKE_DISH_RECOMMENDATION(
+                '${userId}',
+                ${stringStyles},
+                ${stringTags},
+                ${Number(calorie)}
+                )
+                UNION ALL
+                SELECT (meal_info_2).*
+                FROM MAKE_DISH_RECOMMENDATION(
+                '${userId}',
+                ${stringStyles},
+                ${stringTags},
+                ${Number(calorie)}
+                )
+                UNION ALL
+                SELECT (meal_info_3).*
+                FROM MAKE_DISH_RECOMMENDATION(
+                '${userId}',
+                ${stringStyles},
+                ${stringTags},
+                ${Number(calorie)}
+                )
+                UNION ALL
+                SELECT (meal_info_4).*
+                FROM MAKE_DISH_RECOMMENDATION(
+                '${userId}',
+                ${stringStyles},
+                ${stringTags},
+                ${Number(calorie)}
+                )
+            `);
+            await queryRunner.commitTransaction();
+            return result;
+        } catch (e) {
+            console.log(e);
+            await queryRunner.rollbackTransaction();
+            throw e;
+        }
     }
     // 아침메뉴 추천
     async breakfast(lgn_id: string) {
@@ -212,8 +322,6 @@ export class FoodInfoRepository extends Repository<TbFoodInfo> {
     ) A GROUP BY ROLLUP((FOOD_GROP_CD, FI_NM))
            ORDER BY FOOD_GROP_CD`
         );
-
-        
     }
     // 점심메뉴 추천
     async lunch(lgn_id: string) {
@@ -339,7 +447,7 @@ export class FoodInfoRepository extends Repository<TbFoodInfo> {
     ) A
          GROUP BY ROLLUP((FOOD_GROP_CD, FI_NM))
           ORDER BY FOOD_GROP_CD`
-        )
+        );
     }
 
     // 저녁메뉴 추천
@@ -439,6 +547,6 @@ export class FoodInfoRepository extends Repository<TbFoodInfo> {
                 ) A
         ) A
              GROUP BY ROLLUP((FOOD_GROP_CD, FI_NM))`
-        )
+        );
     }
 }

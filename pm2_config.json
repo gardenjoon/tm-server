@@ -1,0 +1,12 @@
+{
+    "apps": [
+        {
+            "name": "tm-server",
+            "cwd": "./",
+            "script": "ts-node src/index.ts",
+            "watch": true,
+            "autorestart": true,
+            "ignore_watch": ["uploads/*", "git/*"]
+        }
+    ]
+}

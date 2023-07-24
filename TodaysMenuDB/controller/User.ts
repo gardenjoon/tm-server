@@ -1,8 +1,11 @@
-import { DataSource, Repository } from "typeorm";
-import { TbUser } from "../entities/TbUser";
+import { Repository } from "typeorm";
 import { AppDataSource, Entity } from "../index";
+import { UserInfo } from "../entity/UserInfo";
+import { AllergyInfo } from "../entity/AllergyInfo";
+import { UserAllergyInfo } from "../entity/UserAllergyInfo";
+require("dotenv").config();
 
-export class UserRepository extends Repository<TbUser> {
+export class UserRepository extends Repository<UserInfo> {
     //모든 유저 반환
     findAll() {
         return this.find();
@@ -16,41 +19,38 @@ export class UserRepository extends Repository<TbUser> {
 
     findByName(name: string) {
         return this.findBy({
-            userNm: name,
+            userName: name,
         });
     }
 
-    findProfile(userName: string) {
-        return this.createQueryBuilder("user")
-            .select(
-                "user.userId, user.userNm, user.age, user.sttr, user.hateFood, user.likeFood, STRING_AGG(food.cdNm, ',') as cdNmList"
-            )
-            .innerJoin(Entity.Allergy, "allergy", "allergy.userId = user.userId")
-            .innerJoin(Entity.Food, "food", "food.cd = allergy.cd AND food.cdSetCd = allergy.cdSetCd")
-            .where("user.userNm = :name", { name: userName })
-            .groupBy("user.userId, user.userNm, user.age, user.sttr, user.hateFood, user.likeFood")
-            .getRawMany();
-    }
-
     async getProfile(userId: string) {
-        return await AppDataSource.manager.query(
-            `SELECT USER_ID, LGN_ID, USER_NM, PWD, EMIL_ADDR, GNDR_CD, AGE, STTR, BDWG
-            , HATE_FOOD, LIKE_FOOD, WKLY_BEST_ACTV_DYCNT, DY_BEST_ACTV_HR, DY_BEST_ACTV_MIN
-            , WKLY_MDDL_ACTV_DYCNT, DY_MDDL_ACTV_HR, DY_MDDL_ACTV_MIN
-            , WORKING_DAY, WORKING_HOUR, WORKING_MIN
-            , (SELECT ARRAY_TO_STRING(ARRAY_AGG(B.CD_NM),',')
-                 FROM TB_USER_FOOD_CD_INFO A, TB_FOOD_CD B
-                WHERE A.CD_SET_CD = B.CD_SET_CD AND A.CD = B.CD AND A.USER_ID = '${userId}') AS ALLERGY_INFO
-         FROM TB_USER
-        WHERE USER_ID = '${userId}'`
-        );
+        const allergyList = await AppDataSource.manager.query(`
+            SELECT * FROM user_allergy_info
+            LEFT JOIN allergy_info ON allergy_info.algy_id = user_allergy_info.algy_id
+            WHERE user_allergy_info.user_id = '${userId}'
+        `)
+        let newAllergyList = []
+        allergyList.map((x) => {
+            let y = {};
+            y['algyId'] = x['algy_id'];
+            y['algySqno'] = x['algy_sqno'];
+            y['algyNm'] = x['algy_nm'];
+            newAllergyList.push(y);
+        })
+        let userInfo = await this.createQueryBuilder('user')
+        .leftJoinAndSelect('user.userExercise', 'userExercise')
+        .where(`user.userId = '${userId}'`)
+        .getOne()
+
+        userInfo['userAllergyInfos'] = newAllergyList
+        return userInfo;
     }
 
     async checkId(lgnId: string) {
         return await AppDataSource.manager.query(
             `SELECT COUNT(*)
-              FROM TB_USER
-            WHERE LGN_ID = UPPER('${lgnId}')`
+              FROM user_info
+            WHERE account = '${lgnId}'`
         );
     }
 
@@ -75,68 +75,7 @@ export class UserRepository extends Repository<TbUser> {
         }
     }
 
-    async updateUser(
-        userId: string,
-        loginData: {
-            name: string;
-            id: string;
-            password: string;
-            email: string;
-            gender: number;
-            birth: number;
-            tall: number;
-            weight: number;
-            hate: string[];
-            like: string[];
-            allergy: string[];
-        },
-        activityData: {
-            hardTimes: { days: number; hours: number; minutes: number };
-            softTimes: { days: number; hours: number; minutes: number };
-            walkTimes: { days: number; hours: number; minutes: number };
-        }
-    ) {
-        const queryRunner = AppDataSource.createQueryRunner();
-
-        await queryRunner.connect();
-
-        await queryRunner.startTransaction();
-
-        try {
-            await queryRunner.manager.query(
-                `UPDATE TB_USER
-                    SET
-                        AGE = ${loginData.birth}::numeric
-                        , STTR = ${loginData.tall}::numeric
-                        , bdwg = ${loginData.weight}::numeric
-                        , GNDR_CD = '${loginData.gender}'
-                        , HATE_FOOD = '${loginData.hate}'
-                        , LIKE_FOOD = '${loginData.like}'
-                        , WKLY_BEST_ACTV_DYCNT = ${activityData.hardTimes.days}::numeric
-                        , DY_BEST_ACTV_HR = '${activityData.hardTimes.days}'
-                        , DY_BEST_ACTV_MIN = '${activityData.hardTimes.days}'
-                        , WKLY_MDDL_ACTV_DYCNT = ${activityData.softTimes.days}::numeric
-                        , DY_MDDL_ACTV_HR = '${activityData.softTimes.hours}'
-                        , DY_MDDL_ACTV_MIN = '${activityData.softTimes.minutes}'
-                        , WORKING_DAY = '${activityData.walkTimes.days}'
-                        , WORKING_HOUR = '${activityData.walkTimes.hours}'
-                        , WORKING_MIN = '${activityData.walkTimes.minutes}'
-                        , RGSR_ID = '${userId}'
-                        , RGSN_DTTM = TO_CHAR(CURRENT_TIMESTAMP,'YYYYMMDDHH24MISS')
-                        , AMND_ID = '${userId}'
-                        , AMNT_DTTM = TO_CHAR(CURRENT_TIMESTAMP,'YYYYMMDDHH24MISS')
-                    WHERE USER_ID = '${userId}'
-            `
-            );
-            await queryRunner.commitTransaction();
-            return "Profile Successfully Updated";
-        } catch (e) {
-            console.log(e);
-            await queryRunner.rollbackTransaction();
-            throw e;
-        }
-    }
-
+    
     async signIn(login_id: String, password: String) {
         const queryRunner = AppDataSource.createQueryRunner();
 
@@ -147,11 +86,13 @@ export class UserRepository extends Repository<TbUser> {
         try {
             const user = (
                 await queryRunner.manager.query(`
-                SELECT user_id, pwd FROM tb_user
-                    where lgn_id=UPPER('${login_id}')
+                SELECT user_id, pwd FROM user_info
+                    where account='${login_id}'
             `)
             )[0];
+            console.log(user);
             await queryRunner.commitTransaction();
+
             if (!user) {
                 return "No User";
             } else if (password != user["pwd"]) {
@@ -167,31 +108,40 @@ export class UserRepository extends Repository<TbUser> {
     }
 
     async signUp(
-        loginData: {
-            name: string;
-            id: string;
-            password: string;
+        profile: {
+            account: string;
+            user_name: string;
+            pwd: string;
             email: string;
             gender: number;
-            birth: number;
-            tall: number;
+            birth: string;
+            height: number;
             weight: number;
-            hate: string[];
-            like: string[];
             allergy: string[];
         },
-        activityData: {
-            hardTimes: { days: number; hours: number; minutes: number };
-            softTimes: { days: number; hours: number; minutes: number };
-            walkTimes: { days: number; hours: number; minutes: number };
+        allergy : {
+            allergy_id : number,
+            allergy_sequence_number : number,
+            allergy_name : string
+        }[],
+        excersize: {
+            hard: {
+                days: number,
+                hours: number,
+                minutes: number
+            },
+            middle: {
+                days: number,
+                hours: number,
+                minutes: number
+            },
+            walk: {
+                days: number,
+                hours: number,
+                minutes: number
+            },
         }
     ) {
-        const userId = (
-            await AppDataSource.manager
-                .query(`SELECT 'USER'||LPAD(cast(cast(COALESCE(cast(MAX(SUBSTR(USER_ID,5)) as varchar),'00') as integer)+1 as varchar),10,'0') as user_id
-        FROM TB_USER`)
-        )[0].user_id;
-
         const queryRunner = AppDataSource.createQueryRunner();
 
         await queryRunner.connect();
@@ -200,102 +150,178 @@ export class UserRepository extends Repository<TbUser> {
 
         try {
             await queryRunner.manager.query(`
-            INSERT INTO TB_USER
+            INSERT INTO USER_INFO
             (
-                USER_ID,
-                USER_NM,
-                LGN_ID,
-                PWD,
-                EMIL_ADDR,
-                GNDR_CD,
-                AGE,
-                STTR,
-                BDWG,
-                wkly_best_actv_dycnt,
-                dy_best_actv_hr,
-                dy_best_actv_min,
-                wkly_mddl_actv_dycnt,
-                dy_mddl_actv_hr,
-                dy_mddl_actv_min,
-                working_day,
-                working_hour,
-                working_min,
-                hate_food,
-                like_food,
-                USE_YN,
-                ATHR_CD,
-                RGSR_ID,
-                RGSN_DTTM,
-                AMND_ID,
-                AMNT_DTTM
-            ) VALUES (
-                '${userId}',
-                '${loginData.name}',
-                UPPER('${loginData.id}'),
-                '${loginData.password}',
-                '${loginData.email}',
-                '${loginData.gender}',
-                ${loginData.birth},
-                ${loginData.tall},
-                ${loginData.weight},
-                ${activityData.hardTimes.days},
-                '${activityData.hardTimes.hours.toString()}',
-                '${activityData.hardTimes.minutes.toString()}',
-                ${activityData.softTimes.days},
-                '${activityData.softTimes.hours.toString()}',
-                '${activityData.softTimes.minutes.toString()}',
-                '${activityData.walkTimes.days.toString()}',
-                '${activityData.walkTimes.hours.toString()}',
-                '${activityData.walkTimes.minutes.toString()}',
-                '${loginData.hate.join(",")}',
-                '${loginData.like.join(",")}',
-                'Y',
-                '20',
-                '${userId}',
-                TO_CHAR(CURRENT_TIMESTAMP,'YYYYMMDDHH24MISS'),
-                '${userId}',
-                TO_CHAR(CURRENT_TIMESTAMP,'YYYYMMDDHH24MISS')
-            );
+                account,
+                user_name,
+                pwd,
+                email,
+                gender,
+                birth,
+                height,
+                weight
+            ) VALUES ( 
+                '${profile.account}',
+                '${profile.user_name}',
+                '${profile.pwd}',
+                '${profile.email}',
+                ${profile.gender == 30 ? 20 : profile.gender},
+                '${profile.birth ?? 20000101}',
+                ${profile.height ?? 170},
+                ${profile.weight ?? 60})
             `);
 
-            for (let allergy_item of loginData.allergy) {
-                const result = (
-                    await AppDataSource.manager.query(`
-                        select * from tb_food_cd
-                        where cd_nm
-                        like '${allergy_item}'
-                    `)
-                )[0];
-                await AppDataSource.manager.query(`
-                    INSERT INTO TB_USER_FOOD_CD_INFO
-                    (
-                        USER_ID,
-                        CD_SET_CD,
-                        CD,
-                        LGN_ID,
-                        RGSR_ID,
-                        RGSN_DTTM,
-                        AMND_ID,
-                        AMNT_DTTM
-                    )
-                    VALUES (
-                        '${userId}',
-                        '${result.cd_set_cd}',
-                        '${result.cd}',
-                        UPPER('${loginData.id}'),
-                        '${userId}',
-                        TO_CHAR(CURRENT_TIMESTAMP, 'YYYYMMDDHH24MISS'),
-                        '${userId}',
-                        TO_CHAR(CURRENT_TIMESTAMP, 'YYYYMMDDHH24MISS'))
+            const userId = (await queryRunner.manager.query(`
+                SELECT user_id FROM USER_INFO
+                WHERE account = '${profile.account}'
+            `))[0].user_id;
+            console.log(userId);
+
+            for (let allergy_item of allergy) {
+                await queryRunner.manager.query(`
+                INSERT INTO USER_ALLERGY_INFO
+                (
+                    user_id,
+                    algy_id
+                ) VALUES (
+                    '${userId}',
+                    ${allergy_item.allergy_id}
+                )
                 `);
             }
 
+            await queryRunner.manager.query(`
+                INSERT INTO USER_EXERCISE
+                (
+                    user_id,
+                    wk_hg_act,
+                    dy_hg_act_hr,
+                    dy_hg_act_mn,
+                    wk_md_act,
+                    dy_md_act_hr,
+                    dy_md_act_mn,
+                    wk_walk,
+                    dy_walk_hr,
+                    dy_walk_mn
+                ) VALUES (
+                    '${userId}',
+                    ${excersize.hard.days},
+                    ${excersize.hard.hours},
+                    ${excersize.hard.minutes},
+                    ${excersize.middle.days},
+                    ${excersize.middle.hours},
+                    ${excersize.middle.minutes},
+                    ${excersize.walk.days},
+                    ${excersize.walk.hours},
+                    ${excersize.walk.minutes}
+                )
+            `);
             await queryRunner.commitTransaction();
             return userId;
         } catch (e) {
             await queryRunner.rollbackTransaction();
             console.log(e);
-            return e.detail;
         }
     }
+
+    async updateUser(
+        userId: string,
+        profile: {
+            account: string;
+            user_name: string;
+            pwd: string;
+            email: string;
+            gender: number;
+            birth: string;
+            height: number;
+            weight: number;
+        },
+        allergy : {
+            allergy_id : number,
+            allergy_sequence_number : number,
+            allergy_name : string
+        }[],
+        excersize: {
+            hard: {
+                days: number,
+                hours: number,
+                minutes: number
+            },
+            middle: {
+                days: number,
+                hours: number,
+                minutes: number
+            },
+            walk: {
+                days: number,
+                hours: number,
+                minutes: number
+            },
+        }
+    ) {
+        const queryRunner = AppDataSource.createQueryRunner();
+
+        await queryRunner.connect();
+
+        await queryRunner.startTransaction();
+
+        try {
+            await queryRunner.manager.query(
+                `UPDATE USER_INFO
+                SET
+                    account = '${profile.account}',
+                    user_name = '${profile.user_name}',
+                    pwd = '${profile.pwd}',
+                    email = '${profile.email}',
+                    gender = ${profile.gender},
+                    birth = '${profile.birth}',
+                    height = ${profile.height},
+                    weight = ${profile.weight}
+                WHERE user_id = '${userId}'
+            `
+            );
+
+            await queryRunner.manager.query(`
+                DELETE FROM USER_ALLERGY_INFO
+                WHERE user_id = '${userId}'
+            `)
+
+            for (let allergy_item of allergy) {
+                await queryRunner.manager.query(`
+                INSERT INTO USER_ALLERGY_INFO
+                (
+                    user_id,
+                    algy_id
+                ) VALUES (
+                    '${userId}',
+                    ${allergy_item.allergy_id}
+                )
+                `);
+            }
+
+            await queryRunner.manager.query(`
+                UPDATE USER_EXERCISE
+                SET
+                    wk_hg_act = ${excersize.hard.days},
+                    dy_hg_act_hr = ${excersize.hard.hours},
+                    dy_hg_act_mn = ${excersize.hard.minutes},
+                    wk_md_act = ${excersize.middle.days},
+                    dy_md_act_hr = ${excersize.middle.hours},
+                    dy_md_act_mn = ${excersize.middle.minutes},
+                    wk_walk = ${excersize.walk.days},
+                    dy_walk_hr = ${excersize.walk.hours},
+                    dy_walk_mn = ${excersize.walk.minutes}
+                WHERE user_id = '${userId}'
+            `);
+
+
+            await queryRunner.commitTransaction();
+            return "Profile Successfully Updated";
+        } catch (e) {
+            console.log(e);
+            await queryRunner.rollbackTransaction();
+            throw e;
+        }
+    }
+
 }
